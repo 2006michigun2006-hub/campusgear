@@ -66,6 +66,16 @@ describe('US-02/04/05 availability, reservation, cancellation', () => {
     const detail = await api().get('/api/assets/PRJ-001').expect(200);
     assert.equal(detail.body.busy.length, 1);
     assert.equal(detail.body.asset.unavailableReason, undefined);
+    // The borrower's name is visible only to the borrower and to staff.
+    assert.deepEqual(Object.keys(detail.body.busy[0]).sort(), ['end', 'mine', 'start']);
+    const own = await api().get('/api/assets/PRJ-001').set('Cookie', a.cookie).expect(200);
+    assert.equal(own.body.busy[0].mine, true);
+    assert.equal(own.body.busy[0].name, 'student');
+    const other = await api().get('/api/assets/PRJ-001').set('Cookie', b.cookie).expect(200);
+    assert.equal(other.body.busy[0].name, undefined);
+    const staff = await makeAccount('staff', 'Desk');
+    const desk = await api().get('/api/assets/PRJ-001').set('Cookie', staff.cookie).expect(200);
+    assert.equal(desk.body.busy[0].name, 'student');
 
     await book(api, b.cookie, 'PRJ-001', slot(1, 11, 2)).expect(409); // overlap
     await book(api, b.cookie, 'PRJ-001', slot(1, 12, 1)).expect(201); // adjacent [12,13)

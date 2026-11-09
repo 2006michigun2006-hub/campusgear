@@ -25,6 +25,24 @@ function buildDays(rules) {
 }
 
 const overlaps = (aStart, aEnd, busy) => busy.some((b) => aStart < b.end && b.start < aEnd);
+const bookingAt = (cell, busy) => busy.find((b) => cell.start < b.end && b.start < cell.end);
+
+/** Splits a day row into free cells and runs of consecutive hours held by one booking. */
+function segments(cells, busy) {
+  const out = [];
+  for (let i = 0; i < cells.length; i++) {
+    const booking = bookingAt(cells[i], busy);
+    if (!booking) {
+      out.push({ cell: cells[i] });
+      continue;
+    }
+    let j = i;
+    while (j + 1 < cells.length && bookingAt(cells[j + 1], busy) === booking) j++;
+    out.push({ booking, from: cells[i], to: cells[j], span: j - i + 1 });
+    i = j;
+  }
+  return out;
+}
 const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 export default function AssetPage({ id }) {
@@ -38,7 +56,7 @@ export default function AssetPage({ id }) {
 
   const days = useMemo(() => buildDays(rules), [rules]);
   const busy = useMemo(
-    () => (data?.busy || []).map((b) => ({ start: new Date(b.start).getTime(), end: new Date(b.end).getTime() })),
+    () => (data?.busy || []).map((b) => ({ start: new Date(b.start).getTime(), end: new Date(b.end).getTime(), mine: b.mine, name: b.name })),
     [data],
   );
 
@@ -124,7 +142,7 @@ export default function AssetPage({ id }) {
 
           <h2 className="section-heading">Timetable</h2>
           <p className="hint">
-            Select the pickup hour, then the last hour of your loan. Grey cells are already booked.
+            Select the pickup hour, then the last hour of your loan. Grey cells are already booked; your own bookings are shown in blue with your name.
             All times are {rules.timeZone} time.
           </p>
           <div className="table-scroll">
@@ -140,16 +158,27 @@ export default function AssetPage({ id }) {
                 {days.map((d) => (
                   <tr key={d.key}>
                     <th scope="row">{fmt.day(d.cells[0].start)}</th>
-                    {d.cells.map((c) => {
-                      const isBusy = overlaps(c.start, c.end, busy);
+                    {segments(d.cells, busy).map((seg) => {
+                      if (seg.booking) {
+                        const { mine, name } = seg.booking;
+                        const label = name || 'Booked';
+                        const hours = `${pad(seg.from.hour)} to ${pad(seg.to.hour + 1)}`;
+                        return (
+                          <td key={seg.from.key} colSpan={seg.span} className={mine ? 'busy mine' : 'busy'} title={`${mine ? 'Your booking' : label}, ${hours}`}>
+                            {label}
+                            <span className="visually-hidden">{mine ? ', your booking' : ''}, {hours}</span>
+                          </td>
+                        );
+                      }
+                      const c = seg.cell;
                       const selected = inSel(c);
                       return (
-                        <td key={c.key} className={isBusy ? 'busy' : selected ? 'selected' : 'free'}>
+                        <td key={c.key} className={selected ? 'selected' : 'free'}>
                           <button
                             type="button"
-                            disabled={isBusy || !bookable}
+                            disabled={!bookable}
                             aria-pressed={selected || undefined}
-                            aria-label={`${fmt.day(c.start)}, ${pad(c.hour)} to ${pad(c.hour + 1)}, ${isBusy ? 'booked' : 'free'}`}
+                            aria-label={`${fmt.day(c.start)}, ${pad(c.hour)} to ${pad(c.hour + 1)}, free`}
                             onClick={() => pick(c)}
                           />
                         </td>
@@ -163,6 +192,7 @@ export default function AssetPage({ id }) {
           <ul className="legend" aria-hidden="true">
             <li><span className="key free" /> Free</li>
             <li><span className="key busy" /> Booked</li>
+            <li><span className="key mine" /> Your booking</li>
             <li><span className="key selected" /> Your selection</li>
           </ul>
         </div>

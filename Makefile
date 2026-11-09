@@ -4,7 +4,7 @@
 # Recipes only call node/npm so they behave the same in every shell.
 
 .DEFAULT_GOAL := help
-.PHONY: help install db db-stop db-reset db-status dev build prod test clean
+.PHONY: help install db db-stop db-reset db-status dev build prod test demo-reset clean
 
 DEPS := node_modules/.package-lock.json
 
@@ -25,6 +25,7 @@ help:
 	@echo   make db-stop    - stop the Postgres container, data is kept
 	@echo   make db-reset   - delete the Postgres container and all local data, then recreate it
 	@echo   make db-status  - show the container status
+	@echo   make demo-reset - delete all accounts and bookings in the local database and re-seed demo data
 	@echo   make clean      - remove dist/
 
 # Reinstall only when package.json or the lockfile changed.
@@ -62,6 +63,9 @@ prod: $(DEPS) db build
 
 test: $(DEPS) db
 	npm test
+
+demo-reset: $(DEPS) db
+	node server/reset-demo.js --yes
 
 clean:
 	node -e "require('fs').rmSync('dist', { recursive: true, force: true })"

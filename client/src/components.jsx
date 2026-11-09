@@ -23,9 +23,9 @@ export function PageHeader({ crumbs = [], title, lead }) {
   );
 }
 
-export function Tabs({ tab, items, base }) {
+export function Tabs({ tab, items, base, label = 'Sections' }) {
   return (
-    <nav className="tabs" aria-label="Sections">
+    <nav className="tabs" aria-label={label}>
       {items.map(([key, label]) => (
         <a key={key} href={`#${base}/${key}`} aria-current={tab === key ? 'page' : undefined}>{label}</a>
       ))}

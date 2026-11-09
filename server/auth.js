@@ -22,7 +22,7 @@ export async function verifyPassword(password, stored) {
   return timingSafeEqual(expected, actual);
 }
 
-const hashToken = (token) => createHash('sha256').update(token).digest('hex');
+export const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 
 /** Creates a session row and returns the raw token (only the hash is stored). */
 export async function createSession(accountId, db = { query }) {

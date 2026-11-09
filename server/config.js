@@ -28,6 +28,16 @@ export const config = {
   staffPassword: env.STAFF_PASSWORD || (isProd ? '' : 'staff-demo-pass'),
   demoStudentEmail: (env.DEMO_STUDENT_EMAIL || 'student@campusgear.test').toLowerCase(),
   demoStudentPassword: env.DEMO_STUDENT_PASSWORD || (isProd ? '' : 'student-demo-pass'),
+  // US-03 email sign-in links.
+  // Links are built from a fixed base URL in production so a forged Host header cannot redirect them.
+  publicUrl: (env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || (isProd ? `http://localhost:${int('PORT', 3000)}` : '')).replace(/\/+$/, ''),
+  linkMinutes: int('SIGNIN_LINK_MINUTES', 15),
+  resendApiKey: env.RESEND_API_KEY || '',
+  mailFrom: env.MAIL_FROM || 'CampusGear <onboarding@resend.dev>',
+  logSigninLinks: env.LOG_SIGNIN_LINKS ? env.LOG_SIGNIN_LINKS === 'true' : !isProd,
+  // Request log (S3-11) and data retention (E-07).
+  logRequests: env.LOG_REQUESTS ? env.LOG_REQUESTS === 'true' : !isTest,
+  historyRetentionDays: int('HISTORY_RETENTION_DAYS', 0), // 0 = keep history (retention rule still TBD)
   rules: Object.freeze({
     timeZone: env.CAMPUS_TZ || DEFAULT_RULES.timeZone,
     openHour: int('OPEN_HOUR', DEFAULT_RULES.openHour),

@@ -83,7 +83,8 @@ function ReservationTable({ path, empty, actions }) {
 
 const post = (path) => api(path, { method: 'POST' });
 const checkout = { label: 'Hand over', primary: true, when: (r) => !r.assetUnavailable, run: (r) => post(`/staff/reservations/${r.id}/checkout`), done: (r) => `${r.assetName} handed over to ${r.student.name}.` };
-const cancelBooking = { label: 'Cancel booking', when: (r) => r.assetUnavailable, run: (r) => (window.confirm(`Cancel booking no. ${r.id} for ${r.student.name}?`) ? post(`/reservations/${r.id}/cancel`) : Promise.resolve(null)), done: (r) => `Booking no. ${r.id} cancelled.` };
+// Offered for withdrawn items and for no-shows; there is no automatic no-show rule yet (rule R-14).
+const cancelBooking = { label: 'Cancel booking', when: (r) => r.assetUnavailable || new Date(r.start) < Date.now(), run: (r) => (window.confirm(`Cancel booking no. ${r.id} for ${r.student.name}?`) ? post(`/reservations/${r.id}/cancel`) : Promise.resolve(null)), done: (r) => `Booking no. ${r.id} cancelled.` };
 const giveBack = { label: 'Record return', primary: true, run: (r) => post(`/staff/reservations/${r.id}/return`), done: (r) => `${r.assetName} returned${r.returnedLate ? ' late' : r.returnedEarly ? ' early; the remaining time is released' : ''}.` };
 
 function InventoryTab() {

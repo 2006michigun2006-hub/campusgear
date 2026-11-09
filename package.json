@@ -1,6 +1,6 @@
 {
   "name": "campusgear",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "private": true,
   "description": "CampusGear: a campus equipment-loan booking portal (Team Barcelona / SE-2420)",
   "type": "module",
@@ -13,7 +13,8 @@
     "dev:client": "vite",
     "build": "vite build",
     "migrate": "node server/migrate.js",
-    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\""
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\"",
+    "demo:reset": "node server/reset-demo.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

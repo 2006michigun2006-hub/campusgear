@@ -5,9 +5,11 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 import { loadSession } from './auth.js';
+import { mailEnabled } from './mail.js';
 import { config } from './config.js';
 import { query } from './db.js';
 import { errorHandler } from './errors.js';
+import { requestLog } from './requestLog.js';
 import assetsRouter from './routes/assets.js';
 import authRouter from './routes/auth.js';
 import reservationsRouter from './routes/reservations.js';
@@ -24,6 +26,7 @@ export function createApp() {
   app.use(cookieParser());
 
   const api = express.Router();
+  api.use(requestLog);
 
   // CSRF defence: state-changing calls must be JSON, which a cross-site form cannot send.
   api.use((req, res, next) => {
@@ -38,7 +41,7 @@ export function createApp() {
     res.json({ ok: true });
   });
   api.use(loadSession);
-  api.get('/config', (_req, res) => res.json({ rules: config.rules }));
+  api.get('/config', (_req, res) => res.json({ rules: config.rules, emailSignIn: mailEnabled() }));
   api.use('/auth', authRouter);
   api.use('/assets', assetsRouter);
   api.use('/reservations', reservationsRouter);

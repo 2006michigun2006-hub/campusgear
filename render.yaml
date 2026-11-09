@@ -29,6 +29,13 @@ services:
         value: student@campusgear.test
       - key: DEMO_STUDENT_PASSWORD
         generateValue: true
+      # US-03 email sign-in links. With no email provider configured, links are written to the
+      # service log (Render dashboard -> campusgear -> Logs). Pilot only, synthetic accounts only.
+      # To send real email: add RESEND_API_KEY and MAIL_FROM, then set this to "false".
+      - key: LOG_SIGNIN_LINKS
+        value: "true"
+      - key: LOG_REQUESTS
+        value: "true"
 
 databases:
   - name: campusgear-db

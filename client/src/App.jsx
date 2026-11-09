@@ -4,7 +4,7 @@ import { PageHeader, UNIVERSITY_URL } from './components.jsx';
 import { AppContext, formatters, navigate, useHashRoute } from './util.js';
 import Catalogue from './pages/Catalogue.jsx';
 import AssetPage from './pages/AssetPage.jsx';
-import AuthPage from './pages/AuthPage.jsx';
+import AuthPage, { SignInLinkPage } from './pages/AuthPage.jsx';
 import MyLoans from './pages/MyLoans.jsx';
 import RulesPage from './pages/RulesPage.jsx';
 import StaffPage from './pages/StaffPage.jsx';
@@ -120,7 +120,8 @@ function Page({ route }) {
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 0) return <Catalogue query={new URLSearchParams(query)} />;
   if (parts[0] === 'assets' && parts[1]) return <AssetPage id={decodeURIComponent(parts[1])} />;
-  if (parts[0] === 'login') return <AuthPage mode="login" />;
+  if (parts[0] === 'login') return <AuthPage mode="login" method={parts[1]} />;
+  if (parts[0] === 'signin' && parts[1]) return <SignInLinkPage token={parts[1]} />;
   if (parts[0] === 'register') return <AuthPage mode="register" />;
   if (parts[0] === 'my') return <MyLoans tab={parts[1] || 'active'} />;
   if (parts[0] === 'desk') return <StaffPage tab={parts[1] || 'queue'} />;
@@ -137,6 +138,7 @@ export default function App() {
   const route = useHashRoute();
   const [account, setAccount] = useState(undefined);
   const [rules, setRules] = useState(null);
+  const [emailSignIn, setEmailSignIn] = useState(false);
   const [bootError, setBootError] = useState(null);
 
   useEffect(() => {
@@ -144,11 +146,15 @@ export default function App() {
       .then(([me, cfg]) => {
         setAccount(me.account);
         setRules(cfg.rules);
+        setEmailSignIn(Boolean(cfg.emailSignIn));
       })
       .catch((e) => setBootError(e));
   }, []);
 
-  const ctx = useMemo(() => (rules ? { account, setAccount, rules, fmt: formatters(rules.timeZone) } : null), [account, rules]);
+  const ctx = useMemo(
+    () => (rules ? { account, setAccount, rules, emailSignIn, fmt: formatters(rules.timeZone) } : null),
+    [account, rules, emailSignIn],
+  );
 
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' }).catch(() => {});

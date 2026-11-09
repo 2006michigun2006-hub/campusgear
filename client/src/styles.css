@@ -180,6 +180,7 @@ p { margin: 0 0 10px; }
 }
 .form input:focus { outline: 1px solid var(--blue); border-color: var(--blue); }
 .form .hint { margin: 3px 0 0; }
+.form > .hint:first-child { margin: 0 0 12px; }
 .inline-form { max-width: 520px; padding: 4px 0; }
 .plain-list { margin: 4px 0; padding-left: 18px; }
 

@@ -25,6 +25,16 @@ describe('role matrix for staff endpoints', () => {
   }
 });
 
+describe('role matrix for student endpoints', () => {
+  for (const path of ['/api/reservations/mine', '/api/reservations/history']) {
+    test(`${path}: anonymous 401, staff 403, student 200`, async () => {
+      await api().get(path).expect(401);
+      await api().get(path).set('Cookie', staff.cookie).expect(403);
+      await api().get(path).set('Cookie', student.cookie).expect(200);
+    });
+  }
+});
+
 describe('US-06/07 queue, checkout, return', () => {
   test('queue is ordered by pickup and excludes cancelled', async () => {
     const other = await makeAccount('student');

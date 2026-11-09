@@ -1,0 +1,82 @@
+CampusGear test run
+Date: 2026-11-09 03:18 UTC  Release: 0.2.0  Node: v24.17.0  PostgreSQL 16 (Docker, postgres:16-alpine)
+Command: npm test
+
+Applied migration 001_init.sql
+Applied migration 002_login_links.sql
+▶ US-01 catalogue
+  ✔ lists six synthetic assets anonymously and filters by type
+✔ US-01 catalogue
+▶ US-03 accounts and sessions
+  ✔ register, me, logout, login
+  ✔ duplicate email and weak password are rejected; self-registration never grants staff
+  ✔ expired session is not accepted
+  ✔ state-changing calls require JSON (CSRF guard)
+✔ US-03 accounts and sessions
+▶ US-02/04/05 availability, reservation, cancellation
+  ✔ anonymous users cannot reserve; staff cannot reserve as students
+  ✔ valid booking blocks time; adjacent slot stays valid; cancel reopens
+  ✔ server enforces loan rules
+  ✔ US-11: retry with the same idempotency key does not create a duplicate
+✔ US-02/04/05 availability, reservation, cancellation
+▶ G2: allocation integrity under concurrency
+  ✔ 20 concurrent request pairs yield zero double confirmations
+✔ G2: allocation integrity under concurrency
+Applied migration 001_init.sql
+Applied migration 002_login_links.sql
+▶ S3-11 request log
+  ✔ logs one JSON line per API call without emails, tokens or query strings
+✔ S3-11 request log
+▶ E-09 demo reset
+  ✔ removes all bookings and accounts, returns assets to service and re-seeds
+✔ E-09 demo reset
+✔ zone round-trip keeps wall-clock time
+✔ accepts a valid weekday loan inside handoff hours
+✔ rejects same-day, too far ahead and weekend pickups
+✔ rejects bad hours, lengths and partial hours
+Applied migration 001_init.sql
+Applied migration 002_login_links.sql
+▶ US-03 single-use sign-in links
+  ✔ a valid link signs the matching account in exactly once
+  ✔ expired, unknown and replaced links fail
+  ✔ two simultaneous clicks on one link create one session
+  ✔ unknown addresses get the same answer and no link
+  ✔ a student link never grants staff access; a staff link keeps the staff role
+  ✔ the database stores only a hash of the token
+✔ US-03 single-use sign-in links
+▶ E-07 housekeeping
+  ✔ removes expired sessions and old links; keeps history unless a retention period is set
+✔ E-07 housekeeping
+Applied migration 001_init.sql
+Applied migration 002_login_links.sql
+▶ role matrix for staff endpoints
+  ✔ /api/staff/queue: anonymous 401, student 403, staff 200
+  ✔ /api/staff/overdue: anonymous 401, student 403, staff 200
+  ✔ /api/staff/on-loan: anonymous 401, student 403, staff 200
+  ✔ /api/staff/assets: anonymous 401, student 403, staff 200
+✔ role matrix for staff endpoints
+▶ role matrix for student endpoints
+  ✔ /api/reservations/mine: anonymous 401, staff 403, student 200
+  ✔ /api/reservations/history: anonymous 401, staff 403, student 200
+✔ role matrix for student endpoints
+▶ US-06/07 queue, checkout, return
+  ✔ queue is ordered by pickup and excludes cancelled
+  ✔ valid transitions only; original end preserved; early return releases time
+✔ US-06/07 queue, checkout, return
+▶ US-09 overdue list
+  ✔ only checked-out loans past planned end, oldest first
+✔ US-09 overdue list
+▶ US-08 maintenance unavailability
+  ✔ blocks new bookings, flags existing ones and keeps the reason private
+✔ US-08 maintenance unavailability
+▶ US-10 history privacy
+  ✔ a student only sees their own Returned/Cancelled records
+✔ US-10 history privacy
+ℹ tests 34
+ℹ suites 14
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6591.0438

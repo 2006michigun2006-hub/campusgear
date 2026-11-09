@@ -35,7 +35,18 @@ US-12 and US-13 (waitlist, reminders) are deferred, as the plan says.
 
 ## Run locally
 
-Requirements: Node 20+ and Docker (for PostgreSQL).
+Requirements: Node 20+, Docker Desktop (for PostgreSQL) and GNU make (on Windows: `winget install ezwinports.make`).
+
+```bash
+make dev     # Postgres + API + Vite with hot reload  -> http://localhost:5173
+make prod    # Postgres + production build            -> http://localhost:3000
+make test    # Postgres + test suite
+make         # list all targets (db, db-stop, db-reset, build, clean, …)
+```
+
+`make` creates the Postgres container and the test database when they are missing and installs npm packages when `package.json` changes. Ctrl+C stops the servers. The database keeps running; stop it with `make db-stop`.
+
+Without make, the manual steps are:
 
 ```bash
 docker run -d --name campusgear-pg -e POSTGRES_USER=campusgear -e POSTGRES_PASSWORD=campusgear \

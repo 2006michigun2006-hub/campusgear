@@ -44,6 +44,11 @@
   - `npm test` гоняет файлы последовательно, перед каждым файлом схема дропается.
 
 ## Локальная разработка
+- **Основной способ — `Makefile`:** `make dev` (http://localhost:5173), `make prod` (http://localhost:3000), `make test`, `make db` / `db-stop` / `db-reset` / `db-status`, `make clean`.
+  - У пользователя GNU Make 4.4.1 (ezwinports через winget). Запускает из PowerShell, где make выполняет рецепты через cmd.exe, поэтому в рецептах **только вызовы node/npm**, без sh-синтаксиса.
+  - Логика вынесена в `scripts/db.mjs` (Docker-контейнер `campusgear-pg`, ожидание pg_isready, создание `campusgear_test`) и `scripts/dev.mjs` (API `node --watch` + Vite с префиксами логов; если падает один процесс, гасится и второй).
+  - `prod` экспортирует NODE_ENV=production и это наследуется зависимостями, поэтому установка идёт с `npm install --include=dev`, иначе не будет Vite.
+  - Проверено: make prod и make dev из PowerShell, make test из bash.
 - Postgres в Docker: `docker run -d --name campusgear-pg -e POSTGRES_USER=campusgear -e POSTGRES_PASSWORD=campusgear -e POSTGRES_DB=campusgear -p 55432:5432 postgres:16-alpine`.
   - Плюс отдельная база `campusgear_test` для тестов.
   - DATABASE_URL по умолчанию: `postgres://campusgear:campusgear@localhost:55432/campusgear`.

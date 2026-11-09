@@ -72,7 +72,15 @@
 - [x] Проверено в headless Edge через CDP-скрипт (scratchpad, не в репо): мобильная ширина 390px без горизонтального скролла; полный сценарий студента и сотрудника работает.
 - [x] render.yaml (Blueprint, регион frankfurt, free), CI `.github/workflows/ci.yml`, README.md, `.env.example`
 - [x] git init (ветка main) + первый коммит
-- [ ] Пользователь создаёт пустой репо на GitHub и даёт URL, после этого `git remote add origin … && git push -u origin main`
+- [x] GitHub: https://github.com/2006michigun2006-hub/campusgear (public), push 2026-11-09, CI зелёный.
+  - Через API (токен из Git Credential Manager, права repo/workflow, **без project**) созданы:
+    - 10 меток;
+    - 7 milestones (Sprint 1–6 с датами из плана и Later);
+    - 90 issues: 13 историй, 9 enablers, 63 задачи S1-01…S6-11 как sub-issues, 5 tech-debt.
+  - Задачи с выполненной проверкой (Check) закрыты комментарием-доказательством. Задачи, где нужны люди, открыты с меткой `needs stakeholder`. Истории открыты с меткой `status: built`.
+  - Скрипт `setup-github.mjs` лежит в scratchpad (идемпотентный), не в репо.
+  - Защита `main`: PR + 1 review + check `test`, enforce_admins=false, поэтому владелец может пушить напрямую (bypass).
+  - Доску GitHub Projects пользователь создаёт сам: токену не хватает права `project`.
 - [ ] На Render: New → Blueprint → репозиторий. Пароли staff и демо-студента лежат в Environment сервиса campusgear.
 - [ ] После деплоя проверить `/api/health`, логин staff, бронирование.
 

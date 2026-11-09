@@ -10,6 +10,7 @@ Every release uses synthetic data only. Use it for the pilot and Reviews, not fo
   - The link works once and expires after 15 minutes. Requesting a new link cancels the old one.
   - The Password tab still works.
   - Without an email provider (`RESEND_API_KEY`), links are written to the server log. On Render: campusgear → Logs.
+- **Named bookings in the timetable.** Consecutive booked hours show as one cell. The borrower sees their own name, staff see the borrower's name, everyone else sees "Booked".
 - **Staff can cancel no-shows.** In the pickup queue, **Cancel booking** now also appears once the pickup time has passed.
 - **Request log (S3-11).** One JSON line per API request, with no personal data. Every response carries an `X-Request-Id` header.
 - **Demo reset (E-05, E-09).** `make demo-reset` or `npm run demo:reset -- --yes` wipes accounts and bookings and re-creates the demo data.

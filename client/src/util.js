@@ -64,7 +64,7 @@ export function relativeHours(ms) {
 
 export const STATUS_LABEL = {
   confirmed: 'Confirmed',
-  checked_out: 'Checked out',
+  checked_out: 'On loan',
   returned: 'Returned',
   cancelled: 'Cancelled',
 };

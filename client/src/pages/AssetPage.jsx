@@ -2,9 +2,11 @@ import { useMemo, useRef, useState } from 'react';
 import { validateInterval } from '../../../shared/rules.js';
 import { addDaysToKey, campusDateKey, parseKey, weekdayOfKey, zonedToUtc } from '../../../shared/time.js';
 import { api } from '../api.js';
+import { Box, Notice, PageHeader } from '../components.jsx';
 import { useApp, useLoad } from '../util.js';
 
 const HOUR = 3600000;
+const pad = (h) => `${String(h).padStart(2, '0')}:00`;
 
 function buildDays(rules) {
   const today = campusDateKey(new Date(), rules.timeZone);
@@ -29,7 +31,7 @@ export default function AssetPage({ id }) {
   const { account, rules, fmt } = useApp();
   const { data, error, loading, reload } = useLoad(() => api(`/assets/${encodeURIComponent(id)}`), [id]);
   const [sel, setSel] = useState(null); // {start, end, picking: 'end' | null}
-  const [result, setResult] = useState(null); // {type: 'ok'|'error', message}
+  const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const idemKey = useRef(null);
   const statusRef = useRef(null);
@@ -68,19 +70,19 @@ export default function AssetPage({ id }) {
     try {
       const body = { assetId: id, start: new Date(sel.start).toISOString(), end: new Date(sel.end).toISOString(), idempotencyKey: idemKey.current };
       await api('/reservations', { method: 'POST', body });
-      announce({ type: 'ok', message: `Reserved ${fmt.range(sel.start, sel.end)}.` });
+      announce({ type: 'success', message: `Your reservation for ${fmt.range(sel.start, sel.end)} is confirmed.` });
       setSel(null);
       idemKey.current = null;
       reload();
     } catch (e) {
       if (e.code === 'SLOT_TAKEN') {
-        // US-11: refresh availability, keep the asset, ask for another time.
+        // US-11: refresh availability, keep the item, ask for another time.
         setSel(null);
         idemKey.current = null;
         await reload();
-        announce({ type: 'error', message: `${e.message} Availability has been refreshed.` });
+        announce({ type: 'error', message: `${e.message} The timetable has been updated.` });
       } else if (e.code === 'NETWORK') {
-        announce({ type: 'error', message: `${e.message} Retrying is safe — it will not create a duplicate booking.` });
+        announce({ type: 'error', message: `${e.message} You can press Reserve again; it will not create a second booking.` });
       } else {
         announce({ type: 'error', message: e.message });
       }
@@ -90,96 +92,117 @@ export default function AssetPage({ id }) {
   };
 
   if (error) {
-    return <section className="wrap narrow"><p className="notice error" role="alert">{error.status === 404 ? 'This asset does not exist.' : error.message}</p><a href="#/">Back to catalogue</a></section>;
+    return (
+      <>
+        <PageHeader crumbs={[['Catalogue', '#/'], [id]]} title="Item not found" />
+        <div className="container content"><Notice type="error" role="alert">{error.status === 404 ? 'There is no item with this inventory number.' : error.message}</Notice><p><a href="#/">Back to the catalogue</a></p></div>
+      </>
+    );
   }
-  if (loading && !data) return <section className="wrap"><p className="muted">Loading…</p></section>;
+  if (loading && !data) return <div className="container content"><p>Loading…</p></div>;
+
   const { asset } = data;
   const bookable = asset.status === 'available';
   const inSel = (c) => sel && c.start >= sel.start && c.end <= sel.end;
   const hours = sel ? Math.round((sel.end - sel.start) / HOUR) : 0;
 
   return (
-    <section className="wrap">
-      <p className="crumbs"><a href="#/">Catalogue</a> / {asset.id}</p>
-      <div className="asset-layout">
+    <>
+      <PageHeader crumbs={[['Catalogue', '#/'], [asset.id]]} title={asset.name} />
+      <div className="container content with-aside">
         <div>
-          <h1>{asset.name}</h1>
-          <p className="muted">{asset.description}</p>
-          <dl className="meta wide">
-            <div><dt>Asset ID</dt><dd>{asset.id}</dd></div>
-            <div><dt>Type</dt><dd>{asset.type}</dd></div>
-            <div><dt>Condition</dt><dd>{asset.condition}</dd></div>
-            <div><dt>Pickup point</dt><dd>{asset.pickupLocation}</dd></div>
-          </dl>
-          {!bookable && <p className="notice warn" role="status"><strong>Not bookable right now.</strong> {asset.publicNotice}</p>}
+          <table className="details-table">
+            <tbody>
+              <tr><th scope="row">Inventory no.</th><td>{asset.id}</td></tr>
+              <tr><th scope="row">Category</th><td>{asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}</td></tr>
+              <tr><th scope="row">Condition</th><td>{asset.condition}</td></tr>
+              <tr><th scope="row">Pickup point</th><td>{asset.pickupLocation}</td></tr>
+              <tr><th scope="row">Notes</th><td>{asset.description}</td></tr>
+            </tbody>
+          </table>
+          {!bookable && <Notice type="warning" role="status"><strong>This item is withdrawn from booking.</strong> {asset.publicNotice}</Notice>}
 
-          <h2 className="section-title">Availability</h2>
-          <p className="small muted">
-            Times in {rules.timeZone}. Choose a pickup hour, then the hour you will return it by.
-            Weekdays {rules.openHour}:00–{rules.closeHour}:00, {rules.minLeadDays}–{rules.maxLeadDays} days ahead, {rules.minHours}–{rules.maxHours} hours.
+          <h2 className="section-heading">Timetable</h2>
+          <p className="hint">
+            Select the pickup hour, then the last hour of your loan. Grey cells are already booked.
+            All times are {rules.timeZone} time.
           </p>
-          <div className="legend small" aria-hidden="true">
-            <span><i className="sw free" />Free</span><span><i className="sw busy" />Booked</span><span><i className="sw sel" />Your selection</span>
+          <div className="table-scroll">
+            <table className="timetable" style={{ '--cols': rules.closeHour - rules.openHour }}>
+              <caption className="visually-hidden">Availability of {asset.name} by day and hour</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  {days[0]?.cells.map((c) => <th scope="col" key={c.hour}>{pad(c.hour)}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {days.map((d) => (
+                  <tr key={d.key}>
+                    <th scope="row">{fmt.day(d.cells[0].start)}</th>
+                    {d.cells.map((c) => {
+                      const isBusy = overlaps(c.start, c.end, busy);
+                      const selected = inSel(c);
+                      return (
+                        <td key={c.key} className={isBusy ? 'busy' : selected ? 'selected' : 'free'}>
+                          <button
+                            type="button"
+                            disabled={isBusy || !bookable}
+                            aria-pressed={selected || undefined}
+                            aria-label={`${fmt.day(c.start)}, ${pad(c.hour)} to ${pad(c.hour + 1)}, ${isBusy ? 'booked' : 'free'}`}
+                            onClick={() => pick(c)}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="avail" role="grid" aria-label="Availability by day and hour" style={{ "--cols": rules.closeHour - rules.openHour }}>
-            <div className="avail-row head" role="row">
-              <span role="columnheader" className="day-label">Day</span>
-              {days[0]?.cells.map((c) => <span role="columnheader" key={c.hour}>{c.hour}</span>)}
-            </div>
-            {days.map((d) => (
-              <div className="avail-row" role="row" key={d.key}>
-                <span role="rowheader" className="day-label">{fmt.day(d.cells[0].start)}</span>
-                {d.cells.map((c) => {
-                  const isBusy = overlaps(c.start, c.end, busy);
-                  const selected = inSel(c);
-                  return (
-                    <span role="gridcell" key={c.key}>
-                      <button
-                        type="button"
-                        className={`cell ${isBusy ? 'busy' : 'free'} ${selected ? 'sel' : ''}`}
-                        disabled={isBusy || !bookable}
-                        aria-pressed={selected || undefined}
-                        aria-label={`${fmt.day(c.start)} ${c.hour}:00 to ${c.hour + 1}:00, ${isBusy ? 'booked' : 'free'}`}
-                        onClick={() => pick(c)}
-                      />
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+          <ul className="legend" aria-hidden="true">
+            <li><span className="key free" /> Free</li>
+            <li><span className="key busy" /> Booked</li>
+            <li><span className="key selected" /> Your selection</li>
+          </ul>
         </div>
 
-        <aside className="card booking-panel" aria-labelledby="booking-title">
-          <h2 id="booking-title" className="card-title">Your booking</h2>
-          {!sel && <p className="muted small">No period selected yet.</p>}
-          {sel && (
-            <>
-              <p><strong>{fmt.range(sel.start, sel.end)}</strong><br /><span className="muted small">{hours} hour{hours === 1 ? '' : 's'}{sel.picking === 'end' ? ' · click a later hour to extend' : ''}</span></p>
-              {problems.length > 0 && <ul className="problems small">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
-            </>
-          )}
-          {account?.role === 'student' ? (
-            <div className="actions">
-              <button type="button" className="btn primary" disabled={!sel || problems.length > 0 || submitting || !bookable} onClick={reserve}>
-                {submitting ? 'Reserving…' : 'Reserve'}
-              </button>
-              {sel && <button type="button" className="btn" onClick={() => { setSel(null); setResult(null); }}>Clear</button>}
-            </div>
-          ) : account?.role === 'staff' ? (
-            <p className="small muted">Signed in as desk staff. Students make reservations.</p>
-          ) : (
-            <p className="small"><a href="#/login">Sign in</a> or <a href="#/register">create a student account</a> to reserve.</p>
-          )}
-          <div ref={statusRef} tabIndex={-1} aria-live="polite">
-            {result && (
-              <p className={`notice ${result.type === 'ok' ? 'ok' : 'error'}`}>
-                {result.message} {result.type === 'ok' && <a href="#/my">See my loans</a>}
-              </p>
+        <aside>
+          <Box title="Reservation" id="reservation-title">
+            {!sel && <p className="hint">No time selected.</p>}
+            {sel && (
+              <dl className="summary">
+                <dt>Pickup</dt><dd>{fmt.dateTime(sel.start)}</dd>
+                <dt>Return by</dt><dd>{fmt.dateTime(sel.end)}</dd>
+                <dt>Duration</dt><dd>{hours} hour{hours === 1 ? '' : 's'}</dd>
+                <dt>Pickup point</dt><dd>{asset.pickupLocation}</dd>
+              </dl>
             )}
-          </div>
+            {sel?.picking === 'end' && problems.length === 0 && <p className="hint">Select a later hour to extend the loan.</p>}
+            {problems.length > 0 && <ul className="error-list">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
+
+            {account?.role === 'student' ? (
+              <div className="button-row">
+                <button type="button" className="btn btn-primary" disabled={!sel || problems.length > 0 || submitting || !bookable} onClick={reserve}>
+                  {submitting ? 'Sending…' : 'Reserve'}
+                </button>
+                {sel && <button type="button" className="btn btn-secondary" onClick={() => { setSel(null); setResult(null); }}>Clear</button>}
+              </div>
+            ) : account?.role === 'staff' ? (
+              <p className="hint">Reservations are made by students.</p>
+            ) : (
+              <p><a href="#/login">Sign in</a> or <a href="#/register">register</a> to reserve this item.</p>
+            )}
+            <div ref={statusRef} tabIndex={-1} aria-live="polite">
+              {result && (
+                <Notice type={result.type}>
+                  {result.message} {result.type === 'success' && <a href="#/my">View my loans</a>}
+                </Notice>
+              )}
+            </div>
+          </Box>
         </aside>
       </div>
-    </section>
+    </>
   );
 }

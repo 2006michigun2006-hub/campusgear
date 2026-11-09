@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import { Box, Notice, PageHeader } from '../components.jsx';
 import { navigate, useApp } from '../util.js';
 
 export default function AuthPage({ mode }) {
   const { account, setAccount } = useApp();
   const isRegister = mode === 'register';
+  const title = isRegister ? 'Student registration' : 'Sign in';
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -12,11 +14,13 @@ export default function AuthPage({ mode }) {
 
   if (account) {
     return (
-      <section className="wrap narrow">
-        <h1>You are signed in</h1>
-        <p>Signed in as {account.name} ({account.email}).</p>
-        <a className="btn" href={account.role === 'staff' ? '#/desk' : '#/'}>Continue</a>
-      </section>
+      <>
+        <PageHeader crumbs={[[title]]} title={title} />
+        <div className="container content narrow">
+          <p>You are signed in as <strong>{account.name}</strong> ({account.email}).</p>
+          <p><a href={account.role === 'staff' ? '#/desk' : '#/'}>Continue</a></p>
+        </div>
+      </>
     );
   }
 
@@ -37,33 +41,42 @@ export default function AuthPage({ mode }) {
   };
 
   return (
-    <section className="wrap narrow">
-      <h1>{isRegister ? 'Create a student account' : 'Sign in'}</h1>
-      <form className="card form" onSubmit={submit} noValidate>
-        {isRegister && (
-          <label>Full name
-            <input autoComplete="name" value={form.name} onChange={set('name')} required maxLength={100} />
-          </label>
-        )}
-        <label>Email
-          <input type="email" autoComplete="email" value={form.email} onChange={set('email')} required />
-        </label>
-        <label>Password
-          <input type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} value={form.password} onChange={set('password')} required minLength={isRegister ? 8 : undefined} aria-describedby={isRegister ? 'pw-hint' : undefined} />
-          {isRegister && <span id="pw-hint" className="small muted">At least 8 characters.</span>}
-        </label>
-        {error && (
-          <div className="notice error" role="alert">
-            {error.message}
-            {error.details && <ul>{error.details.map((d) => <li key={d}>{d}</li>)}</ul>}
-          </div>
-        )}
-        <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}</button>
-      </form>
-      <p className="small">
-        {isRegister ? <>Already have an account? <a href="#/login">Sign in</a></> : <>New student? <a href="#/register">Create an account</a></>}
-      </p>
-      {!isRegister && <p className="small muted">Pilot: use test accounts only, not real campus credentials.</p>}
-    </section>
+    <>
+      <PageHeader crumbs={[[title]]} title={title} />
+      <div className="container content narrow">
+        <Box title={isRegister ? 'Create a student account' : 'Account details'} id="auth-title">
+          <form className="form" onSubmit={submit} noValidate>
+            {isRegister && (
+              <div className="field">
+                <label htmlFor="f-name">Full name</label>
+                <input id="f-name" autoComplete="name" value={form.name} onChange={set('name')} required maxLength={100} />
+              </div>
+            )}
+            <div className="field">
+              <label htmlFor="f-email">Email</label>
+              <input id="f-email" type="email" autoComplete="email" value={form.email} onChange={set('email')} required />
+            </div>
+            <div className="field">
+              <label htmlFor="f-password">Password</label>
+              <input id="f-password" type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} value={form.password} onChange={set('password')} required aria-describedby={isRegister ? 'pw-hint' : undefined} />
+              {isRegister && <p id="pw-hint" className="hint">At least 8 characters.</p>}
+            </div>
+            {error && (
+              <Notice type="error" role="alert">
+                {error.message}
+                {error.details && <ul>{error.details.map((d) => <li key={d}>{d}</li>)}</ul>}
+              </Notice>
+            )}
+            <div className="button-row">
+              <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'Please wait…' : isRegister ? 'Register' : 'Sign in'}</button>
+            </div>
+          </form>
+        </Box>
+        <p className="after-box">
+          {isRegister ? <>Already registered? <a href="#/login">Sign in</a>.</> : <>No account yet? <a href="#/register">Register as a student</a>.</>}
+        </p>
+        <p className="hint">During the pilot, please use test accounts, not your university credentials.</p>
+      </div>
+    </>
   );
 }

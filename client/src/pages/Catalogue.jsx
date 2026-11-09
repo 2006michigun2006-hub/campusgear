@@ -1,60 +1,89 @@
 import { api } from '../api.js';
-import { navigate, useLoad } from '../util.js';
+import { Notice, PageHeader } from '../components.jsx';
+import { useApp, useLoad } from '../util.js';
 
 const TYPE_LABEL = { laptop: 'Laptops', projector: 'Projectors' };
 const label = (t) => TYPE_LABEL[t] || t.charAt(0).toUpperCase() + t.slice(1);
 
 export default function Catalogue({ query }) {
+  const { rules } = useApp();
   const type = query.get('type') || '';
-  const { data, error, loading } = useLoad(() => api(`/assets${type ? `?type=${encodeURIComponent(type)}` : ''}`), [type]);
-  const setType = (t) => navigate(t ? `/?type=${encodeURIComponent(t)}` : '/');
+  const { data, error, loading } = useLoad(() => api('/assets'), []);
+  const all = data?.assets || [];
+  const shown = type ? all.filter((a) => a.type === type) : all;
 
   return (
-    <section className="wrap">
-      <div className="page-head">
-        <h1>Borrow equipment</h1>
-        <p className="muted">Browse campus laptops and projectors, check when they are free and reserve a pickup slot.</p>
-      </div>
+    <>
+      <PageHeader
+        crumbs={[['Catalogue']]}
+        title="Equipment catalogue"
+        lead="Laptops and projectors available to AITU students for short-term loan. Choose an item to see when it is free and reserve a pickup time."
+      />
+      <div className="container content with-sidebar">
+        <aside className="sidebar" aria-label="Filters">
+          <h2 className="sidebar-title">Category</h2>
+          <ul className="sidebar-nav">
+            <li><a href="#/" aria-current={!type ? 'true' : undefined}>All equipment <span className="count">{all.length}</span></a></li>
+            {(data?.types || []).map((t) => (
+              <li key={t}>
+                <a href={`#/?type=${encodeURIComponent(t)}`} aria-current={type === t ? 'true' : undefined}>
+                  {label(t)} <span className="count">{all.filter((a) => a.type === t).length}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <h2 className="sidebar-title">How to borrow</h2>
+          <ol className="steps">
+            <li>Sign in with your student account.</li>
+            <li>Open an item and pick a time {rules.minLeadDays}–{rules.maxLeadDays} days ahead.</li>
+            <li>Collect it at the pickup point at the booked time.</li>
+          </ol>
+          <p className="sidebar-more"><a href="#/rules">Full loan rules</a></p>
+        </aside>
 
-      <div className="filters" role="group" aria-label="Filter by type">
-        <button type="button" className="chip" aria-pressed={!type} onClick={() => setType('')}>All</button>
-        {(data?.types || []).map((t) => (
-          <button key={t} type="button" className="chip" aria-pressed={type === t} onClick={() => setType(t)}>{label(t)}</button>
-        ))}
-        {type && <button type="button" className="link-button" onClick={() => setType('')}>Clear filter</button>}
-      </div>
-
-      {error && <p className="notice error" role="alert">{error.message}</p>}
-      {loading && !data && <p className="muted">Loading equipment…</p>}
-      {data && (
-        <>
-          <p className="muted small" aria-live="polite">{data.assets.length} item{data.assets.length === 1 ? '' : 's'}{type ? ` in ${label(type).toLowerCase()}` : ''}</p>
-          {data.assets.length === 0 ? (
-            <div className="empty">
-              <p>No equipment matches this filter.</p>
-              <button type="button" className="btn" onClick={() => setType('')}>Show all equipment</button>
-            </div>
-          ) : (
-            <ul className="grid-cards">
-              {data.assets.map((a) => (
-                <li key={a.id} className="card asset-card">
-                  <div className="asset-top">
-                    <span className={`type-icon ${a.type}`} aria-hidden="true" />
-                    <span className={`badge ${a.status === 'available' ? 'ok' : 'warn'}`}>{a.status === 'available' ? 'Bookable' : 'Unavailable'}</span>
-                  </div>
-                  <h2 className="card-title"><a href={`#/assets/${encodeURIComponent(a.id)}`}>{a.name}</a></h2>
-                  <dl className="meta">
-                    <div><dt>ID</dt><dd>{a.id}</dd></div>
-                    <div><dt>Condition</dt><dd>{a.condition}</dd></div>
-                    <div><dt>Pickup</dt><dd>{a.pickupLocation}</dd></div>
-                  </dl>
-                  {a.publicNotice && <p className="small warn-text">{a.publicNotice}</p>}
-                </li>
-              ))}
-            </ul>
+        <div>
+          {error && <Notice type="error" role="alert">{error.message}</Notice>}
+          {loading && !data && <p>Loading catalogue…</p>}
+          {data && (
+            <>
+              <div className="results-bar" aria-live="polite">
+                <span>{shown.length} item{shown.length === 1 ? '' : 's'}{type ? ` in ${label(type)}` : ''}</span>
+                {type && <a href="#/">Clear filter</a>}
+              </div>
+              {shown.length === 0 ? (
+                <div className="empty-state">
+                  <p>No equipment in this category.</p>
+                  <p><a href="#/">Show all equipment</a></p>
+                </div>
+              ) : (
+                <table className="data-table responsive">
+                  <thead>
+                    <tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col">Condition</th><th scope="col">Pickup point</th><th scope="col">Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {shown.map((a) => (
+                      <tr key={a.id}>
+                        <td data-label="Item">
+                          <a className="item-link" href={`#/assets/${encodeURIComponent(a.id)}`}>{a.name}</a>
+                          <span className="item-id">Inventory no. {a.id}</span>
+                        </td>
+                        <td data-label="Category">{label(a.type).replace(/s$/, '')}</td>
+                        <td data-label="Condition">{a.condition}</td>
+                        <td data-label="Pickup point">{a.pickupLocation}</td>
+                        <td data-label="Status">
+                          {a.status === 'available'
+                            ? <span className="status-text ok">Available</span>
+                            : <span className="status-text warn">Withdrawn{a.publicNotice ? `: ${a.publicNotice}` : ''}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
           )}
-        </>
-      )}
-    </section>
+        </div>
+      </div>
+    </>
   );
 }

@@ -66,7 +66,7 @@ function ReservationTable({ path, empty, actions }) {
                   <td data-label="Status"><StatusTag status={r.status} /></td>
                   <td className="actions-cell">
                     {actions.filter((a) => !a.when || a.when(r)).map((a) => (
-                      <button key={a.label} type="button" className={`btn btn-sm ${a.primary ? 'btn-primary' : 'btn-secondary'}`} disabled={busyId === r.id} onClick={() => act(r, a)}>
+                      <button key={a.label} type="button" className={`btn btn-sm ${a.primary ? '' : 'btn-secondary'}`} disabled={busyId === r.id} onClick={() => act(r, a)}>
                         {a.label}
                       </button>
                     ))}
@@ -136,7 +136,7 @@ function InventoryTab() {
                         <span className="item-id">Students see: “{a.publicNotice}”</span>
                         <span className="item-id">Since {fmt.dateTime(a.statusChangedAt)}; {a.affectedCount} affected booking(s)</span>
                       </>
-                    ) : '—'}
+                    ) : ''}
                   </td>
                   <td className="actions-cell">
                     {a.status === 'available' ? (

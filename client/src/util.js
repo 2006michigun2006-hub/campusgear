@@ -50,7 +50,7 @@ export function formatters(timeZone) {
     time: (d) => time.format(new Date(d)),
     range(a, b) {
       const sameDay = day.format(new Date(a)) === day.format(new Date(b));
-      return sameDay ? `${dt.format(new Date(a))}–${time.format(new Date(b))}` : `${dt.format(new Date(a))} → ${dt.format(new Date(b))}`;
+      return sameDay ? `${dt.format(new Date(a))}–${time.format(new Date(b))}` : `${dt.format(new Date(a))} to ${dt.format(new Date(b))}`;
     },
   };
 }

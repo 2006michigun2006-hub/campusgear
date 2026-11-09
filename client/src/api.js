@@ -17,7 +17,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   try {
     res = await fetch(`/api${path}`, init);
   } catch {
-    throw new ApiError(0, { error: { code: 'NETWORK', message: 'Network error — check your connection and try again.' } });
+    throw new ApiError(0, { error: { code: 'NETWORK', message: 'Network error. Check your connection and try again.' } });
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, data);

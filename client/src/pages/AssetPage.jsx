@@ -117,7 +117,7 @@ export default function AssetPage({ id }) {
               <tr><th scope="row">Category</th><td>{asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}</td></tr>
               <tr><th scope="row">Condition</th><td>{asset.condition}</td></tr>
               <tr><th scope="row">Pickup point</th><td>{asset.pickupLocation}</td></tr>
-              <tr><th scope="row">Notes</th><td>{asset.description}</td></tr>
+              <tr><th scope="row">Specification</th><td>{asset.description}</td></tr>
             </tbody>
           </table>
           {!bookable && <Notice type="warning" role="status"><strong>This item is withdrawn from booking.</strong> {asset.publicNotice}</Notice>}

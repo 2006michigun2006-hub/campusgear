@@ -4,13 +4,14 @@ import { hashPassword } from './auth.js';
 import { config } from './config.js';
 import { pool } from './db.js';
 
+// Test inventory for the pilot (not the real campus asset register).
 export const DEMO_ASSETS = [
-  { id: 'LAP-001', name: 'Laptop A — 14-inch ultrabook', type: 'laptop', condition: 'Good', pickup: 'Library desk, ground floor', description: 'Synthetic record. 16 GB RAM, charger included.' },
-  { id: 'LAP-002', name: 'Laptop B — 15-inch workstation', type: 'laptop', condition: 'Very good', pickup: 'Library desk, ground floor', description: 'Synthetic record. Suitable for video editing; charger included.' },
-  { id: 'LAP-003', name: 'Laptop C — 13-inch convertible', type: 'laptop', condition: 'Fair (scratched lid)', pickup: 'IT help desk, block C', description: 'Synthetic record. Touchscreen with stylus.' },
-  { id: 'PRJ-001', name: 'Projector A — portable LED', type: 'projector', condition: 'Good', pickup: 'Library desk, ground floor', description: 'Synthetic record. HDMI and USB-C cables in the bag.' },
-  { id: 'PRJ-002', name: 'Projector B — full HD', type: 'projector', condition: 'Very good', pickup: 'IT help desk, block C', description: 'Synthetic record. Includes remote and tripod screen.' },
-  { id: 'PRJ-003', name: 'Projector C — mini pocket', type: 'projector', condition: 'Good', pickup: 'IT help desk, block C', description: 'Synthetic record. Battery lasts about two hours.' },
+  { id: 'LAP-001', name: 'Lenovo ThinkPad E14 Gen 5', type: 'laptop', condition: 'Good', pickup: 'Library desk, ground floor', description: 'Intel Core i5, 16 GB RAM, 512 GB SSD. Charger included.' },
+  { id: 'LAP-002', name: 'HP ProBook 450 G10', type: 'laptop', condition: 'Very good', pickup: 'Library desk, ground floor', description: '15.6-inch screen, Intel Core i7, 16 GB RAM. Charger included.' },
+  { id: 'LAP-003', name: 'Apple MacBook Air 13 (M2)', type: 'laptop', condition: 'Fair, scratched lid', pickup: 'IT help desk, block C', description: '8 GB RAM, 256 GB SSD. USB-C charger and HDMI adapter included.' },
+  { id: 'PRJ-001', name: 'Epson EB-E01', type: 'projector', condition: 'Good', pickup: 'Library desk, ground floor', description: '3300 lm, XGA. HDMI cable and remote in the bag.' },
+  { id: 'PRJ-002', name: 'BenQ MW560', type: 'projector', condition: 'Very good', pickup: 'IT help desk, block C', description: '4000 lm, WXGA. HDMI and VGA cables, remote.' },
+  { id: 'PRJ-003', name: 'XGIMI MoGo 2', type: 'projector', condition: 'Good', pickup: 'IT help desk, block C', description: 'Portable, battery lasts about 2 hours. USB-C charger.' },
 ];
 
 async function upsertAccount(client, email, name, password, role) {
@@ -38,7 +39,9 @@ export async function seed(db = pool) {
     for (const a of DEMO_ASSETS) {
       await client.query(
         `INSERT INTO assets(id, name, type, condition, pickup_location, description)
-         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type, condition = EXCLUDED.condition,
+           pickup_location = EXCLUDED.pickup_location, description = EXCLUDED.description`,
         [a.id, a.name, a.type, a.condition, a.pickup, a.description],
       );
     }

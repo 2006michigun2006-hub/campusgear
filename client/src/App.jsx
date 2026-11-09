@@ -119,7 +119,8 @@ function Page({ route }) {
   const [path, query = ''] = route.split('?');
   const parts = path.split('/').filter(Boolean);
   if (parts.length === 0) return <Catalogue query={new URLSearchParams(query)} />;
-  if (parts[0] === 'assets' && parts[1]) return <AssetPage id={decodeURIComponent(parts[1])} />;
+  // key: a different item starts with a fresh selection and status
+  if (parts[0] === 'assets' && parts[1]) return <AssetPage key={parts[1]} id={decodeURIComponent(parts[1])} />;
   if (parts[0] === 'login') return <AuthPage mode="login" method={parts[1]} />;
   if (parts[0] === 'signin' && parts[1]) return <SignInLinkPage token={parts[1]} />;
   if (parts[0] === 'register') return <AuthPage mode="register" />;

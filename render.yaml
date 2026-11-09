@@ -1,0 +1,40 @@
+# Render Blueprint: one Node web service + one managed PostgreSQL database.
+# Deploy: Render Dashboard → New → Blueprint → pick this repository.
+services:
+  - type: web
+    name: campusgear
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: campusgear-db
+          property: connectionString
+      - key: CAMPUS_TZ
+        value: Asia/Almaty
+      - key: SEED_DEMO
+        value: "true"
+      - key: STAFF_EMAIL
+        value: staff@campusgear.test
+      - key: STAFF_PASSWORD
+        generateValue: true # see the value under Environment in the Render dashboard
+      - key: DEMO_STUDENT_EMAIL
+        value: student@campusgear.test
+      - key: DEMO_STUDENT_PASSWORD
+        generateValue: true
+
+databases:
+  - name: campusgear-db
+    plan: free
+    region: frankfurt
+    databaseName: campusgear
+    user: campusgear
+    postgresMajorVersion: "16"
+    ipAllowList: [] # only services inside Render can connect

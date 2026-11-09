@@ -1,0 +1,91 @@
+// Synthetic pilot data only (Part 1: "the team will use synthetic inventory and test accounts").
+import { addDaysToKey, campusDateKey, parseKey, weekdayOfKey, zonedToUtc } from '../shared/time.js';
+import { hashPassword } from './auth.js';
+import { config } from './config.js';
+import { pool } from './db.js';
+
+export const DEMO_ASSETS = [
+  { id: 'LAP-001', name: 'Laptop A — 14-inch ultrabook', type: 'laptop', condition: 'Good', pickup: 'Library desk, ground floor', description: 'Synthetic record. 16 GB RAM, charger included.' },
+  { id: 'LAP-002', name: 'Laptop B — 15-inch workstation', type: 'laptop', condition: 'Very good', pickup: 'Library desk, ground floor', description: 'Synthetic record. Suitable for video editing; charger included.' },
+  { id: 'LAP-003', name: 'Laptop C — 13-inch convertible', type: 'laptop', condition: 'Fair (scratched lid)', pickup: 'IT help desk, block C', description: 'Synthetic record. Touchscreen with stylus.' },
+  { id: 'PRJ-001', name: 'Projector A — portable LED', type: 'projector', condition: 'Good', pickup: 'Library desk, ground floor', description: 'Synthetic record. HDMI and USB-C cables in the bag.' },
+  { id: 'PRJ-002', name: 'Projector B — full HD', type: 'projector', condition: 'Very good', pickup: 'IT help desk, block C', description: 'Synthetic record. Includes remote and tripod screen.' },
+  { id: 'PRJ-003', name: 'Projector C — mini pocket', type: 'projector', condition: 'Good', pickup: 'IT help desk, block C', description: 'Synthetic record. Battery lasts about two hours.' },
+];
+
+async function upsertAccount(client, email, name, password, role) {
+  const hash = await hashPassword(password);
+  const { rows } = await client.query(
+    `INSERT INTO accounts(email, name, password_hash, role) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role
+     RETURNING id`,
+    [email, name, hash, role],
+  );
+  return rows[0].id;
+}
+
+function nextWeekdayAt(hour, afterDays = 1) {
+  const tz = config.rules.timeZone;
+  let key = addDaysToKey(campusDateKey(new Date(), tz), afterDays);
+  while (weekdayOfKey(key) > 5) key = addDaysToKey(key, 1);
+  return zonedToUtc({ ...parseKey(key), hour }, tz);
+}
+
+export async function seed(db = pool) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    for (const a of DEMO_ASSETS) {
+      await client.query(
+        `INSERT INTO assets(id, name, type, condition, pickup_location, description)
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
+        [a.id, a.name, a.type, a.condition, a.pickup, a.description],
+      );
+    }
+
+    let staffId = null;
+    if (config.staffPassword) {
+      staffId = await upsertAccount(client, config.staffEmail, 'Desk Staff (demo)', config.staffPassword, 'staff');
+    } else {
+      console.warn('STAFF_PASSWORD is not set: no staff account was created.');
+    }
+
+    if (config.demoStudentPassword) {
+      const studentId = await upsertAccount(client, config.demoStudentEmail, 'Demo Student', config.demoStudentPassword, 'student');
+      const { rows } = await client.query('SELECT count(*)::int AS n FROM reservations WHERE account_id = $1', [studentId]);
+      if (rows[0].n === 0) {
+        const day = 86400000;
+        const now = Date.now();
+        const hourAgo = (h) => new Date(Math.floor(now / 3600000) * 3600000 - h * 3600000);
+        // Past returned loan, a cancelled booking, an overdue loan and an upcoming booking.
+        await client.query(
+          `INSERT INTO reservations(asset_id, account_id, start_at, planned_end_at, status, checked_out_at, checked_out_by, returned_at, returned_by)
+           VALUES ('PRJ-001', $1, $2, $3, 'returned', $2, $4, $3, $4)`,
+          [studentId, hourAgo(24 * 10), hourAgo(24 * 10 - 4), staffId],
+        );
+        await client.query(
+          `INSERT INTO reservations(asset_id, account_id, start_at, planned_end_at, status, cancelled_at, cancelled_by)
+           VALUES ('LAP-002', $1, $2, $3, 'cancelled', $4, $1)`,
+          [studentId, hourAgo(24 * 6), hourAgo(24 * 6 - 3), new Date(now - 8 * day)],
+        );
+        await client.query(
+          `INSERT INTO reservations(asset_id, account_id, start_at, planned_end_at, status, checked_out_at, checked_out_by)
+           VALUES ('LAP-003', $1, $2, $3, 'checked_out', $2, $4)`,
+          [studentId, hourAgo(24 * 3), hourAgo(24), staffId],
+        );
+        const start = nextWeekdayAt(10);
+        await client.query(
+          `INSERT INTO reservations(asset_id, account_id, start_at, planned_end_at, status)
+           VALUES ('LAP-001', $1, $2, $3, 'confirmed')`,
+          [studentId, start, new Date(start.getTime() + 2 * 3600000)],
+        );
+      }
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
